@@ -500,6 +500,388 @@ def stop_playback(ctx: Context) -> str:
         return f"Error stopping playback: {str(e)}"
 
 @mcp.tool()
+def get_scenes(ctx: Context) -> str:
+    """Get information about all scenes in the Ableton session."""
+    try:
+        ableton = get_ableton_connection()
+        result = ableton.send_command("get_scenes")
+        return json.dumps(result, indent=2)
+    except Exception as e:
+        logger.error(f"Error getting scenes: {str(e)}")
+        return f"Error getting scenes: {str(e)}"
+
+@mcp.tool()
+def get_song_position(ctx: Context) -> str:
+    """Get the current song position (bar, beat, time)."""
+    try:
+        ableton = get_ableton_connection()
+        result = ableton.send_command("get_song_position")
+        return json.dumps(result, indent=2)
+    except Exception as e:
+        logger.error(f"Error getting song position: {str(e)}")
+        return f"Error getting song position: {str(e)}"
+
+@mcp.tool()
+def get_master_track_info(ctx: Context) -> str:
+    """Get information about the master track including loaded devices."""
+    try:
+        ableton = get_ableton_connection()
+        result = ableton.send_command("get_master_track_info")
+        return json.dumps(result, indent=2)
+    except Exception as e:
+        logger.error(f"Error getting master track info: {str(e)}")
+        return f"Error getting master track info: {str(e)}"
+
+@mcp.tool()
+def set_track_volume(ctx: Context, track_index: int, volume: float) -> str:
+    """
+    Set the volume of a track.
+    
+    Parameters:
+    - track_index: The index of the track (0-based)
+    - volume: Volume level from 0.0 to 1.0 (0.85 = 0dB, 1.0 = +6dB)
+    """
+    try:
+        ableton = get_ableton_connection()
+        result = ableton.send_command("set_track_volume", {"track_index": track_index, "volume": volume})
+        return f"Track {track_index} volume set to {result.get('volume', volume):.3f}"
+    except Exception as e:
+        logger.error(f"Error setting track volume: {str(e)}")
+        return f"Error setting track volume: {str(e)}"
+
+@mcp.tool()
+def set_track_pan(ctx: Context, track_index: int, pan: float) -> str:
+    """
+    Set the pan of a track.
+    
+    Parameters:
+    - track_index: The index of the track (0-based)
+    - pan: Pan position from -1.0 (left) to 1.0 (right), 0.0 = center
+    """
+    try:
+        ableton = get_ableton_connection()
+        result = ableton.send_command("set_track_pan", {"track_index": track_index, "pan": pan})
+        return f"Track {track_index} pan set to {result.get('pan', pan):.2f}"
+    except Exception as e:
+        logger.error(f"Error setting track pan: {str(e)}")
+        return f"Error setting track pan: {str(e)}"
+
+@mcp.tool()
+def set_track_mute(ctx: Context, track_index: int, mute: bool) -> str:
+    """
+    Set the mute state of a track.
+    
+    Parameters:
+    - track_index: The index of the track (0-based)
+    - mute: True to mute, False to unmute
+    """
+    try:
+        ableton = get_ableton_connection()
+        result = ableton.send_command("set_track_mute", {"track_index": track_index, "mute": mute})
+        state = "muted" if result.get('mute', mute) else "unmuted"
+        return f"Track {track_index} {state}"
+    except Exception as e:
+        logger.error(f"Error setting track mute: {str(e)}")
+        return f"Error setting track mute: {str(e)}"
+
+@mcp.tool()
+def set_track_solo(ctx: Context, track_index: int, solo: bool) -> str:
+    """
+    Set the solo state of a track.
+    
+    Parameters:
+    - track_index: The index of the track (0-based)
+    - solo: True to solo, False to unsolo
+    """
+    try:
+        ableton = get_ableton_connection()
+        result = ableton.send_command("set_track_solo", {"track_index": track_index, "solo": solo})
+        state = "soloed" if result.get('solo', solo) else "unsoloed"
+        return f"Track {track_index} {state}"
+    except Exception as e:
+        logger.error(f"Error setting track solo: {str(e)}")
+        return f"Error setting track solo: {str(e)}"
+
+@mcp.tool()
+def get_device_parameters(ctx: Context, track_index: int, device_index: int) -> str:
+    """
+    Get all parameters of a device on a track.
+    
+    Parameters:
+    - track_index: The index of the track (0-based, -1 for master, -2 for return A, -3 for return B, etc.)
+    - device_index: The index of the device on the track (0-based)
+    """
+    try:
+        ableton = get_ableton_connection()
+        result = ableton.send_command("get_device_parameters", {"track_index": track_index, "device_index": device_index})
+        return json.dumps(result, indent=2)
+    except Exception as e:
+        logger.error(f"Error getting device parameters: {str(e)}")
+        return f"Error getting device parameters: {str(e)}"
+
+@mcp.tool()
+def set_device_parameter(ctx: Context, track_index: int, device_index: int, parameter_index: int, value: float) -> str:
+    """
+    Set a specific parameter on a device.
+    
+    Parameters:
+    - track_index: The index of the track (0-based, -1 for master, -2 for return A, -3 for return B, etc.)
+    - device_index: The index of the device on the track (0-based)
+    - parameter_index: The index of the parameter (0-based, get from get_device_parameters)
+    - value: The value to set (will be clamped to parameter's min/max range)
+    """
+    try:
+        ableton = get_ableton_connection()
+        result = ableton.send_command("set_device_parameter", {
+            "track_index": track_index, 
+            "device_index": device_index,
+            "parameter_index": parameter_index,
+            "value": value
+        })
+        return f"Set {result.get('parameter_name', 'parameter')} on {result.get('device_name', 'device')} to {result.get('value', value)}"
+    except Exception as e:
+        logger.error(f"Error setting device parameter: {str(e)}")
+        return f"Error setting device parameter: {str(e)}"
+
+@mcp.tool()
+def get_return_tracks(ctx: Context) -> str:
+    """Get information about all return tracks including loaded devices."""
+    try:
+        ableton = get_ableton_connection()
+        result = ableton.send_command("get_return_tracks")
+        return json.dumps(result, indent=2)
+    except Exception as e:
+        logger.error(f"Error getting return tracks: {str(e)}")
+        return f"Error getting return tracks: {str(e)}"
+
+@mcp.tool()
+def load_effect_on_return(ctx: Context, return_index: int, uri: str) -> str:
+    """
+    Load an audio effect onto a return track.
+    
+    Parameters:
+    - return_index: The index of the return track (0 = Return A, 1 = Return B, etc.)
+    - uri: The URI of the effect to load (get from browser items)
+    """
+    try:
+        ableton = get_ableton_connection()
+        result = ableton.send_command("load_effect_on_return", {"return_index": return_index, "item_uri": uri})
+        if result.get("loaded"):
+            return f"Loaded '{result.get('item_name', 'effect')}' on {result.get('return_name', 'Return')} track"
+        else:
+            return "Failed to load effect on return track"
+    except Exception as e:
+        logger.error(f"Error loading effect on return: {str(e)}")
+        return f"Error loading effect on return: {str(e)}"
+
+@mcp.tool()
+def set_track_send(ctx: Context, track_index: int, send_index: int, value: float) -> str:
+    """
+    Set the send level from a track to a return track.
+    
+    Parameters:
+    - track_index: The index of the source track (0-based)
+    - send_index: The index of the send/return (0 = Send A, 1 = Send B, etc.)
+    - value: Send level from 0.0 to 1.0
+    """
+    try:
+        ableton = get_ableton_connection()
+        result = ableton.send_command("set_track_send", {
+            "track_index": track_index,
+            "send_index": send_index,
+            "value": value
+        })
+        return f"Track {track_index} send {send_index} set to {result.get('value', value):.3f}"
+    except Exception as e:
+        logger.error(f"Error setting track send: {str(e)}")
+        return f"Error setting track send: {str(e)}"
+
+@mcp.tool()
+def set_master_volume(ctx: Context, volume: float) -> str:
+    """
+    Set the master track volume.
+    
+    Parameters:
+    - volume: Volume level from 0.0 to 1.0 (0.85 = 0dB, 1.0 = +6dB)
+    """
+    try:
+        ableton = get_ableton_connection()
+        result = ableton.send_command("set_master_volume", {"volume": volume})
+        return f"Master volume set to {result.get('volume', volume):.3f}"
+    except Exception as e:
+        logger.error(f"Error setting master volume: {str(e)}")
+        return f"Error setting master volume: {str(e)}"
+
+@mcp.tool()
+def load_effect_on_master(ctx: Context, uri: str) -> str:
+    """
+    Load an audio effect onto the master track.
+    
+    Parameters:
+    - uri: The URI of the effect to load (get from browser items)
+    """
+    try:
+        ableton = get_ableton_connection()
+        result = ableton.send_command("load_effect_on_master", {"item_uri": uri})
+        if result.get("loaded"):
+            return f"Loaded '{result.get('item_name', 'effect')}' on Master track"
+        else:
+            return "Failed to load effect on master"
+    except Exception as e:
+        logger.error(f"Error loading effect on master: {str(e)}")
+        return f"Error loading effect on master: {str(e)}"
+
+@mcp.tool()
+def play_arrangement(ctx: Context, arrangement: List[Dict[str, int]]) -> str:
+    """
+    Play an arrangement by automatically firing scenes at specified bar positions.
+    Perfect for recording into Arrangement View.
+    
+    Parameters:
+    - arrangement: List of {"bar": int, "scene": int} dicts specifying when to fire each scene
+    
+    Example:
+    [
+        {"bar": 1, "scene": 4},   # Fire scene 4 at bar 1 (intro)
+        {"bar": 17, "scene": 0},  # Fire scene 0 at bar 17 (build)
+        {"bar": 25, "scene": 1},  # Fire scene 1 at bar 25 (drop)
+    ]
+    """
+    try:
+        ableton = get_ableton_connection()
+        result = ableton.send_command("play_arrangement", {"arrangement": arrangement})
+        return f"Started arrangement with {len(arrangement)} sections. Recording into Arrangement View..."
+    except Exception as e:
+        logger.error(f"Error playing arrangement: {str(e)}")
+        return f"Error playing arrangement: {str(e)}"
+
+@mcp.tool()
+def fire_scene(ctx: Context, scene_index: int) -> str:
+    """
+    Fire a scene (trigger all clips in the scene at once).
+    
+    Parameters:
+    - scene_index: The index of the scene to fire (0-based)
+    """
+    try:
+        ableton = get_ableton_connection()
+        result = ableton.send_command("fire_scene", {"scene_index": scene_index})
+        scene_name = result.get("scene_name", "")
+        return f"Fired scene {scene_index}" + (f" ({scene_name})" if scene_name else "")
+    except Exception as e:
+        logger.error(f"Error firing scene: {str(e)}")
+        return f"Error firing scene: {str(e)}"
+
+@mcp.tool()
+def stop_all_clips(ctx: Context) -> str:
+    """Stop all playing clips in the session."""
+    try:
+        ableton = get_ableton_connection()
+        result = ableton.send_command("stop_all_clips")
+        return "Stopped all clips"
+    except Exception as e:
+        logger.error(f"Error stopping all clips: {str(e)}")
+        return f"Error stopping all clips: {str(e)}"
+
+@mcp.tool()
+def create_scene(ctx: Context, scene_index: int = -1) -> str:
+    """
+    Create a new empty scene.
+    
+    Parameters:
+    - scene_index: The index to insert the scene at (-1 = end of list)
+    """
+    try:
+        ableton = get_ableton_connection()
+        result = ableton.send_command("create_scene", {"scene_index": scene_index})
+        return f"Created new scene at index {result.get('index', scene_index)}"
+    except Exception as e:
+        logger.error(f"Error creating scene: {str(e)}")
+        return f"Error creating scene: {str(e)}"
+
+@mcp.tool()
+def duplicate_scene(ctx: Context, scene_index: int) -> str:
+    """
+    Duplicate a scene (creates a copy with all clips).
+    
+    Parameters:
+    - scene_index: The index of the scene to duplicate
+    """
+    try:
+        ableton = get_ableton_connection()
+        result = ableton.send_command("duplicate_scene", {"scene_index": scene_index})
+        return f"Duplicated scene {scene_index} to new scene {result.get('new_index', scene_index + 1)}"
+    except Exception as e:
+        logger.error(f"Error duplicating scene: {str(e)}")
+        return f"Error duplicating scene: {str(e)}"
+
+@mcp.tool()
+def delete_scene(ctx: Context, scene_index: int) -> str:
+    """
+    Delete a scene.
+    
+    Parameters:
+    - scene_index: The index of the scene to delete
+    """
+    try:
+        ableton = get_ableton_connection()
+        result = ableton.send_command("delete_scene", {"scene_index": scene_index})
+        return f"Deleted scene {scene_index}"
+    except Exception as e:
+        logger.error(f"Error deleting scene: {str(e)}")
+        return f"Error deleting scene: {str(e)}"
+
+@mcp.tool()
+def set_scene_name(ctx: Context, scene_index: int, name: str) -> str:
+    """
+    Set the name of a scene.
+    
+    Parameters:
+    - scene_index: The index of the scene to rename
+    - name: The new name for the scene
+    """
+    try:
+        ableton = get_ableton_connection()
+        result = ableton.send_command("set_scene_name", {"scene_index": scene_index, "name": name})
+        return f"Renamed scene {scene_index} to '{name}'"
+    except Exception as e:
+        logger.error(f"Error setting scene name: {str(e)}")
+        return f"Error setting scene name: {str(e)}"
+
+@mcp.tool()
+def capture_midi(ctx: Context) -> str:
+    """Capture recently played MIDI notes into a new clip (like pressing the Capture MIDI button in Ableton)."""
+    try:
+        ableton = get_ableton_connection()
+        result = ableton.send_command("capture_midi")
+        return "Captured MIDI to new clip"
+    except Exception as e:
+        logger.error(f"Error capturing MIDI: {str(e)}")
+        return f"Error capturing MIDI: {str(e)}"
+
+@mcp.tool()
+def undo(ctx: Context) -> str:
+    """Undo the last action in Ableton."""
+    try:
+        ableton = get_ableton_connection()
+        result = ableton.send_command("undo")
+        return "Undid last action"
+    except Exception as e:
+        logger.error(f"Error undoing: {str(e)}")
+        return f"Error undoing: {str(e)}"
+
+@mcp.tool()
+def redo(ctx: Context) -> str:
+    """Redo the last undone action in Ableton."""
+    try:
+        ableton = get_ableton_connection()
+        result = ableton.send_command("redo")
+        return "Redid action"
+    except Exception as e:
+        logger.error(f"Error redoing: {str(e)}")
+        return f"Error redoing: {str(e)}"
+
+@mcp.tool()
 def get_browser_tree(ctx: Context, category_type: str = "all") -> str:
     """
     Get a hierarchical tree of browser categories from Ableton.
