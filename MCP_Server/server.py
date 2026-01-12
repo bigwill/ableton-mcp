@@ -711,6 +711,321 @@ def set_master_volume(ctx: Context, volume: float) -> str:
         logger.error(f"Error setting master volume: {str(e)}")
         return f"Error setting master volume: {str(e)}"
 
+# HIGH PRIORITY FEATURES - Track Management
+
+@mcp.tool()
+def create_audio_track(ctx: Context, index: int = -1) -> str:
+    """
+    Create a new audio track in the Ableton session.
+    
+    Parameters:
+    - index: The index to insert the track at (-1 = end of list)
+    """
+    try:
+        ableton = get_ableton_connection()
+        result = ableton.send_command("create_audio_track", {"index": index})
+        return f"Created audio track '{result.get('name', 'Track')}' at index {result.get('index', index)}"
+    except Exception as e:
+        logger.error(f"Error creating audio track: {str(e)}")
+        return f"Error creating audio track: {str(e)}"
+
+@mcp.tool()
+def delete_track(ctx: Context, track_index: int) -> str:
+    """
+    Delete a track from the session.
+    
+    Parameters:
+    - track_index: The index of the track to delete (0-based)
+    """
+    try:
+        ableton = get_ableton_connection()
+        result = ableton.send_command("delete_track", {"track_index": track_index})
+        return f"Deleted track '{result.get('track_name', 'Track')}' at index {track_index}"
+    except Exception as e:
+        logger.error(f"Error deleting track: {str(e)}")
+        return f"Error deleting track: {str(e)}"
+
+@mcp.tool()
+def duplicate_track(ctx: Context, track_index: int) -> str:
+    """
+    Duplicate a track (creates a copy with all clips and devices).
+    
+    Parameters:
+    - track_index: The index of the track to duplicate (0-based)
+    """
+    try:
+        ableton = get_ableton_connection()
+        result = ableton.send_command("duplicate_track", {"track_index": track_index})
+        return f"Duplicated track to index {result.get('new_index', track_index+1)} with name '{result.get('new_name', 'Track')}'"
+    except Exception as e:
+        logger.error(f"Error duplicating track: {str(e)}")
+        return f"Error duplicating track: {str(e)}"
+
+# HIGH PRIORITY FEATURES - Clip Management
+
+@mcp.tool()
+def get_clip_notes(ctx: Context, track_index: int, clip_index: int) -> str:
+    """
+    Get all MIDI notes from a clip for modification or analysis.
+    
+    Parameters:
+    - track_index: The index of the track containing the clip (0-based)
+    - clip_index: The index of the clip slot containing the clip (0-based)
+    """
+    try:
+        ableton = get_ableton_connection()
+        result = ableton.send_command("get_clip_notes", {"track_index": track_index, "clip_index": clip_index})
+        return json.dumps(result, indent=2)
+    except Exception as e:
+        logger.error(f"Error getting clip notes: {str(e)}")
+        return f"Error getting clip notes: {str(e)}"
+
+@mcp.tool()
+def remove_notes_from_clip(ctx: Context, track_index: int, clip_index: int, 
+                          start_time: float = 0.0, end_time: float = 4.0,
+                          pitch_start: int = 0, pitch_end: int = 128) -> str:
+    """
+    Remove notes from a clip in the specified time and pitch range.
+    
+    Parameters:
+    - track_index: The index of the track containing the clip (0-based)
+    - clip_index: The index of the clip slot containing the clip (0-based)
+    - start_time: Start time in beats (default: 0.0)
+    - end_time: End time in beats (default: 4.0)
+    - pitch_start: Starting MIDI pitch (default: 0, C-2)
+    - pitch_end: Ending MIDI pitch (default: 128, G8)
+    """
+    try:
+        ableton = get_ableton_connection()
+        result = ableton.send_command("remove_notes_from_clip", {
+            "track_index": track_index,
+            "clip_index": clip_index,
+            "start_time": start_time,
+            "end_time": end_time,
+            "pitch_start": pitch_start,
+            "pitch_end": pitch_end
+        })
+        return f"Removed notes from clip (time: {start_time}-{end_time}, pitch: {pitch_start}-{pitch_end})"
+    except Exception as e:
+        logger.error(f"Error removing notes from clip: {str(e)}")
+        return f"Error removing notes from clip: {str(e)}"
+
+@mcp.tool()
+def replace_notes_in_clip(ctx: Context, track_index: int, clip_index: int, notes: list) -> str:
+    """
+    Replace all notes in a clip with new notes.
+    
+    Parameters:
+    - track_index: The index of the track containing the clip (0-based)
+    - clip_index: The index of the clip slot containing the clip (0-based)
+    - notes: List of note dictionaries, each with pitch, start_time, duration, velocity, and mute
+    """
+    try:
+        ableton = get_ableton_connection()
+        result = ableton.send_command("replace_notes_in_clip", {
+            "track_index": track_index,
+            "clip_index": clip_index,
+            "notes": notes
+        })
+        return f"Replaced notes in clip with {result.get('note_count', len(notes))} new notes"
+    except Exception as e:
+        logger.error(f"Error replacing notes in clip: {str(e)}")
+        return f"Error replacing notes in clip: {str(e)}"
+
+@mcp.tool()
+def delete_clip(ctx: Context, track_index: int, clip_index: int) -> str:
+    """
+    Delete a clip from a clip slot.
+    
+    Parameters:
+    - track_index: The index of the track containing the clip (0-based)
+    - clip_index: The index of the clip slot containing the clip (0-based)
+    """
+    try:
+        ableton = get_ableton_connection()
+        result = ableton.send_command("delete_clip", {"track_index": track_index, "clip_index": clip_index})
+        return f"Deleted clip '{result.get('clip_name', 'Clip')}' from track {track_index}, slot {clip_index}"
+    except Exception as e:
+        logger.error(f"Error deleting clip: {str(e)}")
+        return f"Error deleting clip: {str(e)}"
+
+@mcp.tool()
+def duplicate_clip(ctx: Context, track_index: int, clip_index: int, 
+                   target_track_index: int, target_clip_index: int) -> str:
+    """
+    Duplicate a clip to another clip slot.
+    
+    Parameters:
+    - track_index: The index of the source track (0-based)
+    - clip_index: The index of the source clip slot (0-based)
+    - target_track_index: The index of the target track (0-based)
+    - target_clip_index: The index of the target clip slot (0-based)
+    """
+    try:
+        ableton = get_ableton_connection()
+        result = ableton.send_command("duplicate_clip", {
+            "track_index": track_index,
+            "clip_index": clip_index,
+            "target_track_index": target_track_index,
+            "target_clip_index": target_clip_index
+        })
+        return f"Duplicated clip to track {target_track_index}, slot {target_clip_index}"
+    except Exception as e:
+        logger.error(f"Error duplicating clip: {str(e)}")
+        return f"Error duplicating clip: {str(e)}"
+
+@mcp.tool()
+def set_clip_loop(ctx: Context, track_index: int, clip_index: int,
+                  loop_start: float, loop_end: float, looping: bool = True) -> str:
+    """
+    Set the loop points and loop state of a clip.
+    
+    Parameters:
+    - track_index: The index of the track containing the clip (0-based)
+    - clip_index: The index of the clip slot containing the clip (0-based)
+    - loop_start: Loop start position in beats
+    - loop_end: Loop end position in beats
+    - looping: Whether the clip should loop (default: True)
+    """
+    try:
+        ableton = get_ableton_connection()
+        result = ableton.send_command("set_clip_loop", {
+            "track_index": track_index,
+            "clip_index": clip_index,
+            "loop_start": loop_start,
+            "loop_end": loop_end,
+            "looping": looping
+        })
+        return f"Set clip loop: {loop_start}-{loop_end} beats, looping={'on' if looping else 'off'}"
+    except Exception as e:
+        logger.error(f"Error setting clip loop: {str(e)}")
+        return f"Error setting clip loop: {str(e)}"
+
+# HIGH PRIORITY FEATURES - Device Control
+
+@mcp.tool()
+def set_device_enabled(ctx: Context, track_index: int, device_index: int, enabled: bool) -> str:
+    """
+    Enable or disable a device (bypass for A/B comparison).
+    
+    Parameters:
+    - track_index: The index of the track (0-based, -1 for master, -2 for return A, etc.)
+    - device_index: The index of the device on the track (0-based)
+    - enabled: True to enable, False to disable/bypass
+    """
+    try:
+        ableton = get_ableton_connection()
+        result = ableton.send_command("set_device_enabled", {
+            "track_index": track_index,
+            "device_index": device_index,
+            "enabled": enabled
+        })
+        state = "enabled" if result.get("enabled", enabled) else "disabled"
+        return f"{result.get('device_name', 'Device')} {state}"
+    except Exception as e:
+        logger.error(f"Error setting device enabled: {str(e)}")
+        return f"Error setting device enabled: {str(e)}"
+
+@mcp.tool()
+def delete_device(ctx: Context, track_index: int, device_index: int) -> str:
+    """
+    Delete a device from a track.
+    
+    Parameters:
+    - track_index: The index of the track (0-based, -1 for master, -2 for return A, etc.)
+    - device_index: The index of the device on the track (0-based)
+    """
+    try:
+        ableton = get_ableton_connection()
+        result = ableton.send_command("delete_device", {
+            "track_index": track_index,
+            "device_index": device_index
+        })
+        return f"Deleted device '{result.get('device_name', 'Device')}' from track {track_index}"
+    except Exception as e:
+        logger.error(f"Error deleting device: {str(e)}")
+        return f"Error deleting device: {str(e)}"
+
+# HIGH PRIORITY FEATURES - Recording
+
+@mcp.tool()
+def set_track_arm(ctx: Context, track_index: int, arm: bool) -> str:
+    """
+    Arm or disarm a track for recording.
+    
+    Parameters:
+    - track_index: The index of the track (0-based)
+    - arm: True to arm for recording, False to disarm
+    """
+    try:
+        ableton = get_ableton_connection()
+        result = ableton.send_command("set_track_arm", {"track_index": track_index, "arm": arm})
+        state = "armed" if result.get("arm", arm) else "disarmed"
+        return f"Track {track_index} {state} for recording"
+    except Exception as e:
+        logger.error(f"Error setting track arm: {str(e)}")
+        return f"Error setting track arm: {str(e)}"
+
+@mcp.tool()
+def get_track_routing(ctx: Context, track_index: int) -> str:
+    """
+    Get input and output routing information for a track.
+    
+    Parameters:
+    - track_index: The index of the track (0-based)
+    """
+    try:
+        ableton = get_ableton_connection()
+        result = ableton.send_command("get_track_routing", {"track_index": track_index})
+        return json.dumps(result, indent=2)
+    except Exception as e:
+        logger.error(f"Error getting track routing: {str(e)}")
+        return f"Error getting track routing: {str(e)}"
+
+@mcp.tool()
+def set_track_input_routing(ctx: Context, track_index: int, routing_type: str, routing_channel: str) -> str:
+    """
+    Set the input routing for a track.
+    
+    Parameters:
+    - track_index: The index of the track (0-based)
+    - routing_type: The input routing type (get from get_track_routing)
+    - routing_channel: The input routing channel (get from get_track_routing)
+    """
+    try:
+        ableton = get_ableton_connection()
+        result = ableton.send_command("set_track_input_routing", {
+            "track_index": track_index,
+            "routing_type": routing_type,
+            "routing_channel": routing_channel
+        })
+        return f"Track {track_index} input routing set to {result.get('input_routing_type', routing_type)}/{result.get('input_routing_channel', routing_channel)}"
+    except Exception as e:
+        logger.error(f"Error setting track input routing: {str(e)}")
+        return f"Error setting track input routing: {str(e)}"
+
+@mcp.tool()
+def set_track_output_routing(ctx: Context, track_index: int, routing_type: str, routing_channel: str) -> str:
+    """
+    Set the output routing for a track.
+    
+    Parameters:
+    - track_index: The index of the track (0-based)
+    - routing_type: The output routing type (get from get_track_routing)
+    - routing_channel: The output routing channel (get from get_track_routing)
+    """
+    try:
+        ableton = get_ableton_connection()
+        result = ableton.send_command("set_track_output_routing", {
+            "track_index": track_index,
+            "routing_type": routing_type,
+            "routing_channel": routing_channel
+        })
+        return f"Track {track_index} output routing set to {result.get('output_routing_type', routing_type)}/{result.get('output_routing_channel', routing_channel)}"
+    except Exception as e:
+        logger.error(f"Error setting track output routing: {str(e)}")
+        return f"Error setting track output routing: {str(e)}"
+
 @mcp.tool()
 def load_effect_on_master(ctx: Context, uri: str) -> str:
     """

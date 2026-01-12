@@ -123,13 +123,24 @@ Once the config file has been set on Claude, and the remote script is running in
 
 ## Capabilities
 
-- Get session and track information
-- Create and modify MIDI and audio tracks
-- Create, edit, and trigger clips
-- Control playback
-- Load instruments and effects from Ableton's browser
-- Add notes to MIDI clips
-- Change tempo and other session parameters
+### Core Features (~80% Coverage)
+- ✅ Get session and track information
+- ✅ Create and modify MIDI and audio tracks
+- ✅ Delete and duplicate tracks
+- ✅ Create, edit, and trigger clips
+- ✅ Get, add, remove, and replace MIDI notes
+- ✅ Delete and duplicate clips
+- ✅ Control clip loop points
+- ✅ Control playback and scenes
+- ✅ Load instruments and effects from Ableton's browser
+- ✅ Enable/disable and delete devices
+- ✅ Control device parameters
+- ✅ Arm tracks for recording
+- ✅ Configure input/output routing
+- ✅ Master and return track control
+- ✅ Change tempo and other session parameters
+
+See [FEATURE_ROADMAP.md](FEATURE_ROADMAP.md) for complete feature list and implementation status.
 
 ## Example Commands
 
@@ -147,11 +158,29 @@ Here are some examples of what you can ask Claude to do:
 - "Play the clip in track 2"
 
 
+## Testing
+
+A comprehensive test suite is included to verify all features are working correctly:
+
+```bash
+# Make sure Ableton Live is running with AbletonMCP Remote Script loaded
+python test_ableton_mcp.py
+```
+
+The test suite will:
+- ✅ Test all 50+ implemented features
+- 📊 Create and manipulate test tracks, clips, and devices
+- 🧹 Clean up automatically after testing
+- 📈 Provide detailed pass/fail report
+
+**Note**: The test will create temporary tracks and clips in your session. It will attempt to clean them up, but it's recommended to run tests in a new/test project.
+
 ## Troubleshooting
 
 - **Connection issues**: Make sure the Ableton Remote Script is loaded, and the MCP server is configured on Claude
 - **Timeout errors**: Try simplifying your requests or breaking them into smaller steps
 - **Have you tried turning it off and on again?**: If you're still having connection errors, try restarting both Claude and Ableton Live
+- **Test failures**: Run `python test_ableton_mcp.py` to diagnose which features aren't working
 
 ## Technical Details
 

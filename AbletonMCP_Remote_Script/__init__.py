@@ -226,8 +226,11 @@ class AbletonMCP(ControlSurface):
                 track_index = params.get("track_index", 0)
                 response["result"] = self._get_track_info(track_index)
             # Commands that modify Live's state should be scheduled on the main thread
-            elif command_type in ["create_midi_track", "set_track_name", 
-                                 "create_clip", "add_notes_to_clip", "set_clip_name", 
+            elif command_type in ["create_midi_track", "create_audio_track", "delete_track", "duplicate_track",
+                                 "set_track_name", 
+                                 "create_clip", "add_notes_to_clip", "get_clip_notes", "remove_notes_from_clip",
+                                 "replace_notes_in_clip", "delete_clip", "duplicate_clip", "set_clip_loop",
+                                 "set_clip_name", 
                                  "set_tempo", "fire_clip", "stop_clip",
                                  "start_playback", "stop_playback", "load_browser_item",
                                  "fire_scene", "stop_all_clips", "create_scene",
@@ -235,7 +238,10 @@ class AbletonMCP(ControlSurface):
                                  "capture_midi", "undo", "redo",
                                  "load_effect_on_master", "get_master_track_info",
                                  "set_track_volume", "set_track_pan", "set_track_mute",
-                                 "set_track_solo", "get_device_parameters", "set_device_parameter",
+                                 "set_track_solo", "set_track_arm", "get_track_routing",
+                                 "set_track_input_routing", "set_track_output_routing",
+                                 "get_device_parameters", "set_device_parameter", "set_device_enabled",
+                                 "delete_device",
                                  "get_return_tracks", "load_effect_on_return",
                                  "set_track_send", "set_master_volume"]:
                 # Use a thread-safe approach with a response queue
@@ -248,6 +254,15 @@ class AbletonMCP(ControlSurface):
                         if command_type == "create_midi_track":
                             index = params.get("index", -1)
                             result = self._create_midi_track(index)
+                        elif command_type == "create_audio_track":
+                            index = params.get("index", -1)
+                            result = self._create_audio_track(index)
+                        elif command_type == "delete_track":
+                            track_index = params.get("track_index", 0)
+                            result = self._delete_track(track_index)
+                        elif command_type == "duplicate_track":
+                            track_index = params.get("track_index", 0)
+                            result = self._duplicate_track(track_index)
                         elif command_type == "set_track_name":
                             track_index = params.get("track_index", 0)
                             name = params.get("name", "")
@@ -262,6 +277,40 @@ class AbletonMCP(ControlSurface):
                             clip_index = params.get("clip_index", 0)
                             notes = params.get("notes", [])
                             result = self._add_notes_to_clip(track_index, clip_index, notes)
+                        elif command_type == "get_clip_notes":
+                            track_index = params.get("track_index", 0)
+                            clip_index = params.get("clip_index", 0)
+                            result = self._get_clip_notes(track_index, clip_index)
+                        elif command_type == "remove_notes_from_clip":
+                            track_index = params.get("track_index", 0)
+                            clip_index = params.get("clip_index", 0)
+                            start_time = params.get("start_time", 0.0)
+                            end_time = params.get("end_time", 4.0)
+                            pitch_start = params.get("pitch_start", 0)
+                            pitch_end = params.get("pitch_end", 128)
+                            result = self._remove_notes_from_clip(track_index, clip_index, start_time, end_time, pitch_start, pitch_end)
+                        elif command_type == "replace_notes_in_clip":
+                            track_index = params.get("track_index", 0)
+                            clip_index = params.get("clip_index", 0)
+                            notes = params.get("notes", [])
+                            result = self._replace_notes_in_clip(track_index, clip_index, notes)
+                        elif command_type == "delete_clip":
+                            track_index = params.get("track_index", 0)
+                            clip_index = params.get("clip_index", 0)
+                            result = self._delete_clip(track_index, clip_index)
+                        elif command_type == "duplicate_clip":
+                            track_index = params.get("track_index", 0)
+                            clip_index = params.get("clip_index", 0)
+                            target_track_index = params.get("target_track_index", 0)
+                            target_clip_index = params.get("target_clip_index", 0)
+                            result = self._duplicate_clip(track_index, clip_index, target_track_index, target_clip_index)
+                        elif command_type == "set_clip_loop":
+                            track_index = params.get("track_index", 0)
+                            clip_index = params.get("clip_index", 0)
+                            loop_start = params.get("loop_start", 0.0)
+                            loop_end = params.get("loop_end", 4.0)
+                            looping = params.get("looping", True)
+                            result = self._set_clip_loop(track_index, clip_index, loop_start, loop_end, looping)
                         elif command_type == "set_clip_name":
                             track_index = params.get("track_index", 0)
                             clip_index = params.get("clip_index", 0)
@@ -359,6 +408,32 @@ class AbletonMCP(ControlSurface):
                         elif command_type == "set_master_volume":
                             volume = params.get("volume", 0.85)
                             result = self._set_master_volume(volume)
+                        elif command_type == "set_device_enabled":
+                            track_index = params.get("track_index", 0)
+                            device_index = params.get("device_index", 0)
+                            enabled = params.get("enabled", True)
+                            result = self._set_device_enabled(track_index, device_index, enabled)
+                        elif command_type == "delete_device":
+                            track_index = params.get("track_index", 0)
+                            device_index = params.get("device_index", 0)
+                            result = self._delete_device(track_index, device_index)
+                        elif command_type == "set_track_arm":
+                            track_index = params.get("track_index", 0)
+                            arm = params.get("arm", False)
+                            result = self._set_track_arm(track_index, arm)
+                        elif command_type == "get_track_routing":
+                            track_index = params.get("track_index", 0)
+                            result = self._get_track_routing(track_index)
+                        elif command_type == "set_track_input_routing":
+                            track_index = params.get("track_index", 0)
+                            routing_type = params.get("routing_type", "")
+                            routing_channel = params.get("routing_channel", "")
+                            result = self._set_track_input_routing(track_index, routing_type, routing_channel)
+                        elif command_type == "set_track_output_routing":
+                            track_index = params.get("track_index", 0)
+                            routing_type = params.get("routing_type", "")
+                            routing_channel = params.get("routing_channel", "")
+                            result = self._set_track_output_routing(track_index, routing_type, routing_channel)
                         
                         # Put the result in the queue
                         response_queue.put({"status": "success", "result": result})
@@ -517,6 +592,69 @@ class AbletonMCP(ControlSurface):
             self.log_message("Error creating MIDI track: " + str(e))
             raise
     
+    def _create_audio_track(self, index):
+        """Create a new audio track at the specified index"""
+        try:
+            # Create the track
+            self._song.create_audio_track(index)
+            
+            # Get the new track
+            new_track_index = len(self._song.tracks) - 1 if index == -1 else index
+            new_track = self._song.tracks[new_track_index]
+            
+            result = {
+                "index": new_track_index,
+                "name": new_track.name
+            }
+            return result
+        except Exception as e:
+            self.log_message("Error creating audio track: " + str(e))
+            raise
+    
+    def _delete_track(self, track_index):
+        """Delete a track at the specified index"""
+        try:
+            if track_index < 0 or track_index >= len(self._song.tracks):
+                raise IndexError("Track index out of range")
+            
+            track = self._song.tracks[track_index]
+            track_name = track.name
+            
+            self._song.delete_track(track_index)
+            
+            result = {
+                "deleted": True,
+                "track_index": track_index,
+                "track_name": track_name
+            }
+            return result
+        except Exception as e:
+            self.log_message("Error deleting track: " + str(e))
+            raise
+    
+    def _duplicate_track(self, track_index):
+        """Duplicate a track at the specified index"""
+        try:
+            if track_index < 0 or track_index >= len(self._song.tracks):
+                raise IndexError("Track index out of range")
+            
+            self._song.duplicate_track(track_index)
+            
+            # The new track is created after the original
+            new_track_index = track_index + 1
+            new_track = self._song.tracks[new_track_index]
+            
+            result = {
+                "duplicated": True,
+                "original_index": track_index,
+                "new_index": new_track_index,
+                "new_name": new_track.name
+            }
+            return result
+        except Exception as e:
+            self.log_message("Error duplicating track: " + str(e))
+            raise
+    
     
     def _set_track_name(self, track_index, name):
         """Set the name of a track"""
@@ -584,6 +722,173 @@ class AbletonMCP(ControlSurface):
             clip = clip_slot.clip
             
             # Convert note data to Live's format
+            # Try the new API first, fall back to old if not available
+            try:
+                if hasattr(clip, 'add_new_notes'):
+                    # New API expects notes as a tuple of tuples with proper types
+                    from _Framework.SubjectSlot import SlotManager, Subject
+                    live_notes = []
+                    for note in notes:
+                        pitch = int(note.get("pitch", 60))
+                        start_time = float(note.get("start_time", 0.0))
+                        duration = float(note.get("duration", 0.25))
+                        velocity = int(note.get("velocity", 100))
+                        mute = bool(note.get("mute", False))
+                        live_notes.append((pitch, start_time, duration, velocity, mute))
+                    
+                    clip.add_new_notes(tuple(live_notes))
+                else:
+                    # Old API fallback
+                    live_notes = []
+                    for note in notes:
+                        pitch = note.get("pitch", 60)
+                        start_time = note.get("start_time", 0.0)
+                        duration = note.get("duration", 0.25)
+                        velocity = note.get("velocity", 100)
+                        mute = note.get("mute", False)
+                        live_notes.append((pitch, start_time, duration, velocity, mute))
+                    
+                    clip.set_notes(tuple(live_notes))
+            except Exception as e:
+                # If new API fails, try old API
+                self.log_message("New API failed, trying old API: " + str(e))
+                live_notes = []
+                for note in notes:
+                    pitch = note.get("pitch", 60)
+                    start_time = note.get("start_time", 0.0)
+                    duration = note.get("duration", 0.25)
+                    velocity = note.get("velocity", 100)
+                    mute = note.get("mute", False)
+                    live_notes.append((pitch, start_time, duration, velocity, mute))
+                
+                clip.set_notes(tuple(live_notes))
+            
+            result = {
+                "note_count": len(notes)
+            }
+            return result
+        except Exception as e:
+            self.log_message("Error adding notes to clip: " + str(e))
+            raise
+    
+    def _get_clip_notes(self, track_index, clip_index):
+        """Get all MIDI notes from a clip"""
+        try:
+            if track_index < 0 or track_index >= len(self._song.tracks):
+                raise IndexError("Track index out of range")
+            
+            track = self._song.tracks[track_index]
+            
+            if clip_index < 0 or clip_index >= len(track.clip_slots):
+                raise IndexError("Clip index out of range")
+            
+            clip_slot = track.clip_slots[clip_index]
+            
+            if not clip_slot.has_clip:
+                raise Exception("No clip in slot")
+            
+            clip = clip_slot.clip
+            
+            # Get all notes from the clip using the newer API
+            # get_notes_extended signature: (from_pitch, pitch_span, from_time, time_span)
+            if hasattr(clip, 'get_notes_extended'):
+                notes_data = clip.get_notes_extended(0, 128, 0.0, clip.length)
+            else:
+                # Fallback for older versions: (from_time, from_pitch, time_span, pitch_span)
+                notes_data = clip.get_notes(0.0, 0, clip.length, 128)
+            
+            # Convert to our format
+            notes = []
+            for note in notes_data:
+                # New API returns MidiNote objects with properties, old API returns tuples
+                if hasattr(note, 'pitch'):
+                    # New API - MidiNote object
+                    notes.append({
+                        "pitch": note.pitch,
+                        "start_time": note.start_time,
+                        "duration": note.duration,
+                        "velocity": note.velocity,
+                        "mute": note.mute if hasattr(note, 'mute') else False
+                    })
+                else:
+                    # Old API - tuple
+                    notes.append({
+                        "pitch": note[0],
+                        "start_time": note[1],
+                        "duration": note[2],
+                        "velocity": note[3],
+                        "mute": note[4] if len(note) > 4 else False
+                    })
+            
+            result = {
+                "note_count": len(notes),
+                "notes": notes,
+                "clip_length": clip.length
+            }
+            return result
+        except Exception as e:
+            self.log_message("Error getting clip notes: " + str(e))
+            raise
+    
+    def _remove_notes_from_clip(self, track_index, clip_index, start_time, end_time, pitch_start, pitch_end):
+        """Remove notes from a clip in the specified time and pitch range"""
+        try:
+            if track_index < 0 or track_index >= len(self._song.tracks):
+                raise IndexError("Track index out of range")
+            
+            track = self._song.tracks[track_index]
+            
+            if clip_index < 0 or clip_index >= len(track.clip_slots):
+                raise IndexError("Clip index out of range")
+            
+            clip_slot = track.clip_slots[clip_index]
+            
+            if not clip_slot.has_clip:
+                raise Exception("No clip in slot")
+            
+            clip = clip_slot.clip
+            
+            # Remove notes in the specified range using the newer API
+            # remove_notes_extended signature: (from_pitch, pitch_span, from_time, time_span)
+            if hasattr(clip, 'remove_notes_extended'):
+                clip.remove_notes_extended(pitch_start, pitch_end - pitch_start, start_time, end_time - start_time)
+            else:
+                # Fallback for older versions: (from_time, from_pitch, time_span, pitch_span)
+                clip.remove_notes(start_time, pitch_start, end_time - start_time, pitch_end - pitch_start)
+            
+            result = {
+                "removed": True,
+                "range": {
+                    "start_time": start_time,
+                    "end_time": end_time,
+                    "pitch_start": pitch_start,
+                    "pitch_end": pitch_end
+                }
+            }
+            return result
+        except Exception as e:
+            self.log_message("Error removing notes from clip: " + str(e))
+            raise
+    
+    def _replace_notes_in_clip(self, track_index, clip_index, notes):
+        """Replace all notes in a clip with new notes"""
+        try:
+            if track_index < 0 or track_index >= len(self._song.tracks):
+                raise IndexError("Track index out of range")
+            
+            track = self._song.tracks[track_index]
+            
+            if clip_index < 0 or clip_index >= len(track.clip_slots):
+                raise IndexError("Clip index out of range")
+            
+            clip_slot = track.clip_slots[clip_index]
+            
+            if not clip_slot.has_clip:
+                raise Exception("No clip in slot")
+            
+            clip = clip_slot.clip
+            
+            # Convert note data to Live's format
             live_notes = []
             for note in notes:
                 pitch = note.get("pitch", 60)
@@ -594,15 +899,153 @@ class AbletonMCP(ControlSurface):
                 
                 live_notes.append((pitch, start_time, duration, velocity, mute))
             
-            # Add the notes
-            clip.set_notes(tuple(live_notes))
+            # Replace all notes in the clip
+            # First remove all notes, then add new ones
+            if hasattr(clip, 'remove_notes_extended'):
+                # remove_notes_extended signature: (from_pitch, pitch_span, from_time, time_span)
+                clip.remove_notes_extended(0, 128, 0.0, clip.length)
+            else:
+                # Fallback: (from_time, from_pitch, time_span, pitch_span)
+                clip.remove_notes(0.0, 0, clip.length, 128)
+            
+            # Add new notes with proper type conversion
+            try:
+                if hasattr(clip, 'add_new_notes'):
+                    # Ensure proper types for new API
+                    typed_notes = []
+                    for note in live_notes:
+                        pitch = int(note[0])
+                        start_time = float(note[1])
+                        duration = float(note[2])
+                        velocity = int(note[3])
+                        mute = bool(note[4])
+                        typed_notes.append((pitch, start_time, duration, velocity, mute))
+                    clip.add_new_notes(tuple(typed_notes))
+                else:
+                    clip.set_notes(tuple(live_notes))
+            except Exception as e:
+                # Fallback to old API on error
+                self.log_message("New API failed, using old API: " + str(e))
+                clip.set_notes(tuple(live_notes))
             
             result = {
-                "note_count": len(notes)
+                "note_count": len(notes),
+                "replaced": True
             }
             return result
         except Exception as e:
-            self.log_message("Error adding notes to clip: " + str(e))
+            self.log_message("Error replacing notes in clip: " + str(e))
+            raise
+    
+    def _delete_clip(self, track_index, clip_index):
+        """Delete a clip from a clip slot"""
+        try:
+            if track_index < 0 or track_index >= len(self._song.tracks):
+                raise IndexError("Track index out of range")
+            
+            track = self._song.tracks[track_index]
+            
+            if clip_index < 0 or clip_index >= len(track.clip_slots):
+                raise IndexError("Clip index out of range")
+            
+            clip_slot = track.clip_slots[clip_index]
+            
+            if not clip_slot.has_clip:
+                raise Exception("No clip in slot")
+            
+            clip_name = clip_slot.clip.name
+            clip_slot.delete_clip()
+            
+            result = {
+                "deleted": True,
+                "track_index": track_index,
+                "clip_index": clip_index,
+                "clip_name": clip_name
+            }
+            return result
+        except Exception as e:
+            self.log_message("Error deleting clip: " + str(e))
+            raise
+    
+    def _duplicate_clip(self, track_index, clip_index, target_track_index, target_clip_index):
+        """Duplicate a clip to another clip slot"""
+        try:
+            if track_index < 0 or track_index >= len(self._song.tracks):
+                raise IndexError("Source track index out of range")
+            
+            if target_track_index < 0 or target_track_index >= len(self._song.tracks):
+                raise IndexError("Target track index out of range")
+            
+            source_track = self._song.tracks[track_index]
+            target_track = self._song.tracks[target_track_index]
+            
+            if clip_index < 0 or clip_index >= len(source_track.clip_slots):
+                raise IndexError("Source clip index out of range")
+            
+            if target_clip_index < 0 or target_clip_index >= len(target_track.clip_slots):
+                raise IndexError("Target clip index out of range")
+            
+            source_slot = source_track.clip_slots[clip_index]
+            target_slot = target_track.clip_slots[target_clip_index]
+            
+            if not source_slot.has_clip:
+                raise Exception("No clip in source slot")
+            
+            if target_slot.has_clip:
+                raise Exception("Target slot already has a clip")
+            
+            # Duplicate the clip
+            source_slot.duplicate_clip_to(target_slot)
+            
+            result = {
+                "duplicated": True,
+                "source": {
+                    "track_index": track_index,
+                    "clip_index": clip_index
+                },
+                "target": {
+                    "track_index": target_track_index,
+                    "clip_index": target_clip_index,
+                    "clip_name": target_slot.clip.name
+                }
+            }
+            return result
+        except Exception as e:
+            self.log_message("Error duplicating clip: " + str(e))
+            raise
+    
+    def _set_clip_loop(self, track_index, clip_index, loop_start, loop_end, looping):
+        """Set the loop points and loop state of a clip"""
+        try:
+            if track_index < 0 or track_index >= len(self._song.tracks):
+                raise IndexError("Track index out of range")
+            
+            track = self._song.tracks[track_index]
+            
+            if clip_index < 0 or clip_index >= len(track.clip_slots):
+                raise IndexError("Clip index out of range")
+            
+            clip_slot = track.clip_slots[clip_index]
+            
+            if not clip_slot.has_clip:
+                raise Exception("No clip in slot")
+            
+            clip = clip_slot.clip
+            
+            # Set loop properties
+            clip.loop_start = loop_start
+            clip.loop_end = loop_end
+            clip.looping = looping
+            
+            result = {
+                "loop_start": clip.loop_start,
+                "loop_end": clip.loop_end,
+                "looping": clip.looping,
+                "length": clip.length
+            }
+            return result
+        except Exception as e:
+            self.log_message("Error setting clip loop: " + str(e))
             raise
     
     def _set_clip_name(self, track_index, clip_index, name):
@@ -1315,6 +1758,190 @@ class AbletonMCP(ControlSurface):
             return result
         except Exception as e:
             self.log_message("Error setting master volume: " + str(e))
+            raise
+    
+    def _set_device_enabled(self, track_index, device_index, enabled):
+        """Enable or disable a device"""
+        try:
+            # Handle special track indices
+            if track_index == -1:
+                track = self._song.master_track
+            elif track_index < -1:
+                return_index = -(track_index + 2)
+                if return_index >= len(self._song.return_tracks):
+                    raise IndexError("Return track index out of range")
+                track = self._song.return_tracks[return_index]
+            else:
+                if track_index >= len(self._song.tracks):
+                    raise IndexError("Track index out of range")
+                track = self._song.tracks[track_index]
+            
+            if device_index < 0 or device_index >= len(track.devices):
+                raise IndexError("Device index out of range")
+            
+            device = track.devices[device_index]
+            
+            # Get the first parameter (Device On)
+            if len(device.parameters) > 0:
+                device.parameters[0].value = 1.0 if enabled else 0.0
+            
+            result = {
+                "device_name": device.name,
+                "enabled": device.parameters[0].value > 0.5 if len(device.parameters) > 0 else True
+            }
+            return result
+        except Exception as e:
+            self.log_message("Error setting device enabled: " + str(e))
+            raise
+    
+    def _delete_device(self, track_index, device_index):
+        """Delete a device from a track"""
+        try:
+            # Handle special track indices
+            if track_index == -1:
+                track = self._song.master_track
+            elif track_index < -1:
+                return_index = -(track_index + 2)
+                if return_index >= len(self._song.return_tracks):
+                    raise IndexError("Return track index out of range")
+                track = self._song.return_tracks[return_index]
+            else:
+                if track_index >= len(self._song.tracks):
+                    raise IndexError("Track index out of range")
+                track = self._song.tracks[track_index]
+            
+            if device_index < 0 or device_index >= len(track.devices):
+                raise IndexError("Device index out of range")
+            
+            device = track.devices[device_index]
+            device_name = device.name
+            
+            track.delete_device(device_index)
+            
+            result = {
+                "deleted": True,
+                "device_name": device_name,
+                "track_index": track_index,
+                "device_index": device_index
+            }
+            return result
+        except Exception as e:
+            self.log_message("Error deleting device: " + str(e))
+            raise
+    
+    def _set_track_arm(self, track_index, arm):
+        """Arm or disarm a track for recording"""
+        try:
+            if track_index < 0 or track_index >= len(self._song.tracks):
+                raise IndexError("Track index out of range")
+            
+            track = self._song.tracks[track_index]
+            track.arm = arm
+            
+            result = {
+                "track_index": track_index,
+                "arm": track.arm
+            }
+            return result
+        except Exception as e:
+            self.log_message("Error setting track arm: " + str(e))
+            raise
+    
+    def _get_track_routing(self, track_index):
+        """Get input and output routing for a track"""
+        try:
+            if track_index < 0 or track_index >= len(self._song.tracks):
+                raise IndexError("Track index out of range")
+            
+            track = self._song.tracks[track_index]
+            
+            # Get available routings
+            input_routings = []
+            if hasattr(track, 'available_input_routing_types'):
+                for routing in track.available_input_routing_types:
+                    input_routings.append(str(routing))
+            
+            output_routings = []
+            if hasattr(track, 'available_output_routing_types'):
+                for routing in track.available_output_routing_types:
+                    output_routings.append(str(routing))
+            
+            result = {
+                "track_index": track_index,
+                "input_routing_type": str(track.input_routing_type) if hasattr(track, 'input_routing_type') else None,
+                "input_routing_channel": str(track.input_routing_channel) if hasattr(track, 'input_routing_channel') else None,
+                "output_routing_type": str(track.output_routing_type) if hasattr(track, 'output_routing_type') else None,
+                "output_routing_channel": str(track.output_routing_channel) if hasattr(track, 'output_routing_channel') else None,
+                "available_input_routings": input_routings,
+                "available_output_routings": output_routings
+            }
+            return result
+        except Exception as e:
+            self.log_message("Error getting track routing: " + str(e))
+            raise
+    
+    def _set_track_input_routing(self, track_index, routing_type_str, routing_channel_str):
+        """Set the input routing for a track"""
+        try:
+            if track_index < 0 or track_index >= len(self._song.tracks):
+                raise IndexError("Track index out of range")
+            
+            track = self._song.tracks[track_index]
+            
+            # Find the matching routing type
+            if hasattr(track, 'available_input_routing_types'):
+                for routing in track.available_input_routing_types:
+                    if str(routing) == routing_type_str:
+                        track.input_routing_type = routing
+                        break
+            
+            # Find the matching routing channel
+            if hasattr(track, 'available_input_routing_channels'):
+                for channel in track.available_input_routing_channels:
+                    if str(channel) == routing_channel_str:
+                        track.input_routing_channel = channel
+                        break
+            
+            result = {
+                "track_index": track_index,
+                "input_routing_type": str(track.input_routing_type),
+                "input_routing_channel": str(track.input_routing_channel)
+            }
+            return result
+        except Exception as e:
+            self.log_message("Error setting track input routing: " + str(e))
+            raise
+    
+    def _set_track_output_routing(self, track_index, routing_type_str, routing_channel_str):
+        """Set the output routing for a track"""
+        try:
+            if track_index < 0 or track_index >= len(self._song.tracks):
+                raise IndexError("Track index out of range")
+            
+            track = self._song.tracks[track_index]
+            
+            # Find the matching routing type
+            if hasattr(track, 'available_output_routing_types'):
+                for routing in track.available_output_routing_types:
+                    if str(routing) == routing_type_str:
+                        track.output_routing_type = routing
+                        break
+            
+            # Find the matching routing channel
+            if hasattr(track, 'available_output_routing_channels'):
+                for channel in track.available_output_routing_channels:
+                    if str(channel) == routing_channel_str:
+                        track.output_routing_channel = channel
+                        break
+            
+            result = {
+                "track_index": track_index,
+                "output_routing_type": str(track.output_routing_type),
+                "output_routing_channel": str(track.output_routing_channel)
+            }
+            return result
+        except Exception as e:
+            self.log_message("Error setting track output routing: " + str(e))
             raise
     
     def _get_browser_item(self, uri, path):
