@@ -1348,6 +1348,287 @@ def load_drum_kit(ctx: Context, track_index: int, rack_uri: str, kit_path: str) 
         logger.error(f"Error loading drum kit: {str(e)}")
         return f"Error loading drum kit: {str(e)}"
 
+# ==================== SESSION SETTINGS ====================
+
+@mcp.tool()
+def get_time_signature(ctx: Context) -> str:
+    """Get the current time signature of the Ableton session."""
+    try:
+        ableton = get_ableton_connection()
+        result = ableton.send_command("get_time_signature")
+        return f"Time signature: {result.get('numerator', 4)}/{result.get('denominator', 4)}"
+    except Exception as e:
+        logger.error(f"Error getting time signature: {str(e)}")
+        return f"Error getting time signature: {str(e)}"
+
+@mcp.tool()
+def set_time_signature(ctx: Context, numerator: int, denominator: int) -> str:
+    """
+    Set the time signature of the Ableton session.
+    
+    Parameters:
+    - numerator: The top number of the time signature (e.g., 4 for 4/4)
+    - denominator: The bottom number of the time signature (e.g., 4 for 4/4)
+    """
+    try:
+        ableton = get_ableton_connection()
+        result = ableton.send_command("set_time_signature", {
+            "numerator": numerator,
+            "denominator": denominator
+        })
+        return f"Time signature set to {result.get('numerator', numerator)}/{result.get('denominator', denominator)}"
+    except Exception as e:
+        logger.error(f"Error setting time signature: {str(e)}")
+        return f"Error setting time signature: {str(e)}"
+
+@mcp.tool()
+def get_metronome(ctx: Context) -> str:
+    """Get the current metronome state (on/off)."""
+    try:
+        ableton = get_ableton_connection()
+        result = ableton.send_command("get_metronome")
+        state = "on" if result.get("enabled", False) else "off"
+        return f"Metronome is {state}"
+    except Exception as e:
+        logger.error(f"Error getting metronome state: {str(e)}")
+        return f"Error getting metronome state: {str(e)}"
+
+@mcp.tool()
+def set_metronome(ctx: Context, enabled: bool) -> str:
+    """
+    Turn the metronome on or off.
+    
+    Parameters:
+    - enabled: True to turn on, False to turn off
+    """
+    try:
+        ableton = get_ableton_connection()
+        result = ableton.send_command("set_metronome", {"enabled": enabled})
+        state = "on" if result.get("enabled", enabled) else "off"
+        return f"Metronome turned {state}"
+    except Exception as e:
+        logger.error(f"Error setting metronome: {str(e)}")
+        return f"Error setting metronome: {str(e)}"
+
+@mcp.tool()
+def get_quantization(ctx: Context) -> str:
+    """Get the current clip trigger quantization setting."""
+    try:
+        ableton = get_ableton_connection()
+        result = ableton.send_command("get_quantization")
+        return f"Clip trigger quantization: {result.get('quantization_name', 'Unknown')} (value: {result.get('quantization_value', 0)})"
+    except Exception as e:
+        logger.error(f"Error getting quantization: {str(e)}")
+        return f"Error getting quantization: {str(e)}"
+
+@mcp.tool()
+def set_quantization(ctx: Context, quantization_value: int) -> str:
+    """
+    Set the clip trigger quantization.
+    
+    Parameters:
+    - quantization_value: 0=None, 1=8 bars, 2=4 bars, 3=2 bars, 4=1 bar,
+                         5=1/2, 6=1/2T, 7=1/4, 8=1/4T, 9=1/8, 10=1/8T,
+                         11=1/16, 12=1/16T, 13=1/32
+    """
+    try:
+        ableton = get_ableton_connection()
+        result = ableton.send_command("set_quantization", {"quantization_value": quantization_value})
+        return f"Clip trigger quantization set to {result.get('quantization_name', 'Unknown')}"
+    except Exception as e:
+        logger.error(f"Error setting quantization: {str(e)}")
+        return f"Error setting quantization: {str(e)}"
+
+@mcp.tool()
+def get_record_quantization(ctx: Context) -> str:
+    """Get the current MIDI recording quantization setting."""
+    try:
+        ableton = get_ableton_connection()
+        result = ableton.send_command("get_record_quantization")
+        return f"MIDI recording quantization: {result.get('quantization_name', 'Unknown')} (value: {result.get('quantization_value', 0)})"
+    except Exception as e:
+        logger.error(f"Error getting record quantization: {str(e)}")
+        return f"Error getting record quantization: {str(e)}"
+
+@mcp.tool()
+def set_record_quantization(ctx: Context, quantization_value: int) -> str:
+    """
+    Set the MIDI recording quantization.
+    
+    Parameters:
+    - quantization_value: 0=None, 1=1/4, 2=1/8, 3=1/8T, 4=1/8 + 1/8T,
+                         5=1/16, 6=1/16T, 7=1/16 + 1/16T, 8=1/32
+    """
+    try:
+        ableton = get_ableton_connection()
+        result = ableton.send_command("set_record_quantization", {"quantization_value": quantization_value})
+        return f"MIDI recording quantization set to {result.get('quantization_name', 'Unknown')}"
+    except Exception as e:
+        logger.error(f"Error setting record quantization: {str(e)}")
+        return f"Error setting record quantization: {str(e)}"
+
+# ==================== VISUAL ORGANIZATION ====================
+
+@mcp.tool()
+def get_track_color(ctx: Context, track_index: int) -> str:
+    """
+    Get the color of a track.
+    
+    Parameters:
+    - track_index: The index of the track (0-based)
+    """
+    try:
+        ableton = get_ableton_connection()
+        result = ableton.send_command("get_track_color", {"track_index": track_index})
+        return f"Track {track_index} color: {result.get('color', 0)}"
+    except Exception as e:
+        logger.error(f"Error getting track color: {str(e)}")
+        return f"Error getting track color: {str(e)}"
+
+@mcp.tool()
+def set_track_color(ctx: Context, track_index: int, color: int) -> str:
+    """
+    Set the color of a track.
+    
+    Parameters:
+    - track_index: The index of the track (0-based)
+    - color: The color value (Ableton uses an integer color index)
+    
+    Common colors: 0=none/default, different integers map to different colors in Ableton's palette
+    """
+    try:
+        ableton = get_ableton_connection()
+        result = ableton.send_command("set_track_color", {
+            "track_index": track_index,
+            "color": color
+        })
+        return f"Track {track_index} color set to {result.get('color', color)}"
+    except Exception as e:
+        logger.error(f"Error setting track color: {str(e)}")
+        return f"Error setting track color: {str(e)}"
+
+@mcp.tool()
+def get_clip_color(ctx: Context, track_index: int, clip_index: int) -> str:
+    """
+    Get the color of a clip.
+    
+    Parameters:
+    - track_index: The index of the track containing the clip (0-based)
+    - clip_index: The index of the clip slot (0-based)
+    """
+    try:
+        ableton = get_ableton_connection()
+        result = ableton.send_command("get_clip_color", {
+            "track_index": track_index,
+            "clip_index": clip_index
+        })
+        return f"Clip at track {track_index}, slot {clip_index} color: {result.get('color', 0)}"
+    except Exception as e:
+        logger.error(f"Error getting clip color: {str(e)}")
+        return f"Error getting clip color: {str(e)}"
+
+@mcp.tool()
+def set_clip_color(ctx: Context, track_index: int, clip_index: int, color: int) -> str:
+    """
+    Set the color of a clip.
+    
+    Parameters:
+    - track_index: The index of the track containing the clip (0-based)
+    - clip_index: The index of the clip slot (0-based)
+    - color: The color value (Ableton uses an integer color index)
+    """
+    try:
+        ableton = get_ableton_connection()
+        result = ableton.send_command("set_clip_color", {
+            "track_index": track_index,
+            "clip_index": clip_index,
+            "color": color
+        })
+        return f"Clip at track {track_index}, slot {clip_index} color set to {result.get('color', color)}"
+    except Exception as e:
+        logger.error(f"Error setting clip color: {str(e)}")
+        return f"Error setting clip color: {str(e)}"
+
+# ==================== ARRANGEMENT VIEW ====================
+
+@mcp.tool()
+def get_arrangement_loop(ctx: Context) -> str:
+    """Get the arrangement loop settings (enabled, start, length, end)."""
+    try:
+        ableton = get_ableton_connection()
+        result = ableton.send_command("get_arrangement_loop")
+        enabled = "enabled" if result.get("loop_enabled", False) else "disabled"
+        return json.dumps({
+            "loop_enabled": result.get("loop_enabled", False),
+            "loop_start": result.get("loop_start", 0),
+            "loop_length": result.get("loop_length", 0),
+            "loop_end": result.get("loop_end", 0),
+            "status": enabled
+        }, indent=2)
+    except Exception as e:
+        logger.error(f"Error getting arrangement loop: {str(e)}")
+        return f"Error getting arrangement loop: {str(e)}"
+
+@mcp.tool()
+def set_arrangement_loop(ctx: Context, loop_enabled: bool = None, loop_start: float = None, loop_length: float = None) -> str:
+    """
+    Set the arrangement loop settings.
+    
+    Parameters:
+    - loop_enabled: True to enable looping, False to disable (optional)
+    - loop_start: Start position of the loop in beats (optional)
+    - loop_length: Length of the loop in beats (optional)
+    """
+    try:
+        ableton = get_ableton_connection()
+        params = {}
+        if loop_enabled is not None:
+            params["loop_enabled"] = loop_enabled
+        if loop_start is not None:
+            params["loop_start"] = loop_start
+        if loop_length is not None:
+            params["loop_length"] = loop_length
+        
+        result = ableton.send_command("set_arrangement_loop", params)
+        enabled = "enabled" if result.get("loop_enabled", False) else "disabled"
+        return f"Arrangement loop {enabled}: {result.get('loop_start', 0)} to {result.get('loop_end', 0)} beats (length: {result.get('loop_length', 0)})"
+    except Exception as e:
+        logger.error(f"Error setting arrangement loop: {str(e)}")
+        return f"Error setting arrangement loop: {str(e)}"
+
+@mcp.tool()
+def set_song_time(ctx: Context, time: float) -> str:
+    """
+    Set the current song playback position (jump to a specific time).
+    
+    Parameters:
+    - time: Position in beats to jump to
+    """
+    try:
+        ableton = get_ableton_connection()
+        result = ableton.send_command("set_song_time", {"time": time})
+        return f"Song position set to {result.get('current_song_time', time)} beats"
+    except Exception as e:
+        logger.error(f"Error setting song time: {str(e)}")
+        return f"Error setting song time: {str(e)}"
+
+@mcp.tool()
+def jump_by_bars(ctx: Context, bars: int) -> str:
+    """
+    Jump forward or backward by a number of bars.
+    
+    Parameters:
+    - bars: Number of bars to jump (positive = forward, negative = backward)
+    """
+    try:
+        ableton = get_ableton_connection()
+        result = ableton.send_command("jump_by_bars", {"bars": bars})
+        direction = "forward" if bars > 0 else "backward"
+        return f"Jumped {abs(bars)} bars {direction}. Current position: {result.get('current_song_time', 0)} beats"
+    except Exception as e:
+        logger.error(f"Error jumping by bars: {str(e)}")
+        return f"Error jumping by bars: {str(e)}"
+
 # Main execution
 def main():
     """Run the MCP server"""

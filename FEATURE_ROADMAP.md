@@ -2,7 +2,7 @@
 
 This document tracks the implementation status and planned features for AbletonMCP to achieve maximum agentic control over Ableton Live.
 
-## Current Coverage: ~80%
+## Current Coverage: ~85%
 
 ---
 
@@ -73,6 +73,24 @@ This document tracks the implementation status and planned features for AbletonM
 - ✅ Capture MIDI
 - ✅ Undo/redo
 
+### Session Settings (NEW)
+- ✅ Get/set time signature
+- ✅ Metronome on/off
+- ✅ Clip trigger quantization
+- ✅ MIDI recording quantization
+
+### Visual Organization (NEW)
+- ✅ Set track color
+- ✅ Get track color
+- ✅ Set clip color
+- ✅ Get clip color
+
+### Arrangement View (NEW)
+- ✅ Get arrangement loop settings
+- ✅ Set arrangement loop (start, length, enabled)
+- ✅ Set song time (jump to position)
+- ✅ Jump by bars (forward/backward navigation)
+
 ---
 
 ## 🔴 Missing Features
@@ -113,31 +131,31 @@ This document tracks the implementation status and planned features for AbletonM
 ### MEDIUM PRIORITY - Workflow Enhancement (~20% coverage gain)
 
 #### Visual Organization
-- [ ] **Set track color** - Visual organization
+- ✅ **Set track color** - Visual organization
   - Implementation: `track.color` (RGB value 0-127 per channel)
-- [ ] **Set clip color** - Visual organization
+- ✅ **Set clip color** - Visual organization
   - Implementation: `clip.color` (RGB value)
 - [ ] **Track grouping (create groups)** - Bus processing
   - Implementation: Create group track, move tracks into it
 
 #### Session Settings
-- [ ] **Get/set time signature** - Support non-4/4 music
+- ✅ **Get/set time signature** - Support non-4/4 music
   - Implementation: `song.signature_numerator`, `song.signature_denominator`
-- [ ] **Metronome on/off** - Recording workflow
+- ✅ **Metronome on/off** - Recording workflow
   - Implementation: `song.metronome = True/False`
-- [ ] **Set quantization** - Recording/editing workflow
+- ✅ **Set quantization** - Recording/editing workflow
   - Implementation: `song.clip_trigger_quantization`
-- [ ] **Set record quantization** - MIDI recording workflow
+- ✅ **Set record quantization** - MIDI recording workflow
   - Implementation: `song.midi_recording_quantization`
 
 #### Arrangement View
 - [ ] **Switch to Arrangement View** - Navigate views
   - Implementation: `application.view.show_view("Arranger")`
-- [ ] **Get arrangement time** - Query arrangement position
+- ✅ **Get arrangement time** - Query arrangement position
   - Implementation: `song.current_song_time`
-- [ ] **Set arrangement time** - Jump to position
+- ✅ **Set arrangement time** - Jump to position
   - Implementation: `song.current_song_time = time`
-- [ ] **Set arrangement loop** - Loop sections
+- ✅ **Set arrangement loop** - Loop sections
   - Implementation: `song.loop`, `song.loop_start`, `song.loop_length`
 - [ ] **Create locators** - Arrangement markers
   - Implementation: Limited API support, may need workarounds
@@ -301,12 +319,35 @@ When implementing features from this roadmap:
 
 ---
 
-*Last Updated: 2026-01-12 (HIGH PRIORITY Features Complete)*
+*Last Updated: 2026-01-16 (MEDIUM PRIORITY Session & Arrangement Features Added)*
 *Coverage Target: 100% of practical Ableton Live API*
 
 ---
 
-## Recent Updates (2026-01-12)
+## Recent Updates (2026-01-16)
+
+### ✅ MEDIUM PRIORITY Session & Arrangement Features Implemented!
+
+**Session Settings:**
+- `get_time_signature()` / `set_time_signature()` - Support non-4/4 music
+- `get_metronome()` / `set_metronome()` - Recording workflow control
+- `get_quantization()` / `set_quantization()` - Clip trigger quantization
+- `get_record_quantization()` / `set_record_quantization()` - MIDI recording quantization
+
+**Visual Organization:**
+- `get_track_color()` / `set_track_color()` - Color-code tracks
+- `get_clip_color()` / `set_clip_color()` - Color-code clips
+
+**Arrangement View:**
+- `get_arrangement_loop()` / `set_arrangement_loop()` - Control arrangement loop
+- `set_song_time()` - Jump to specific position
+- `jump_by_bars()` - Navigate forward/backward by bars
+
+These features enhance workflow and bring coverage from ~80% to ~85%!
+
+---
+
+## Previous Updates (2026-01-12)
 
 ### ✅ All HIGH PRIORITY Features Implemented!
 
