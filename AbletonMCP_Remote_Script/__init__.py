@@ -243,7 +243,18 @@ class AbletonMCP(ControlSurface):
                                  "get_device_parameters", "set_device_parameter", "set_device_enabled",
                                  "delete_device",
                                  "get_return_tracks", "load_effect_on_return",
-                                 "set_track_send", "set_master_volume"]:
+                                 "set_track_send", "set_master_volume",
+                                 # Session settings
+                                 "get_time_signature", "set_time_signature",
+                                 "get_metronome", "set_metronome",
+                                 "get_quantization", "set_quantization",
+                                 "get_record_quantization", "set_record_quantization",
+                                 # Visual organization
+                                 "set_track_color", "get_track_color",
+                                 "set_clip_color", "get_clip_color",
+                                 # Arrangement
+                                 "get_arrangement_loop", "set_arrangement_loop",
+                                 "set_song_time", "jump_by_bars"]:
                 # Use a thread-safe approach with a response queue
                 response_queue = queue.Queue()
                 
@@ -434,6 +445,59 @@ class AbletonMCP(ControlSurface):
                             routing_type = params.get("routing_type", "")
                             routing_channel = params.get("routing_channel", "")
                             result = self._set_track_output_routing(track_index, routing_type, routing_channel)
+                        # Session settings
+                        elif command_type == "get_time_signature":
+                            result = self._get_time_signature()
+                        elif command_type == "set_time_signature":
+                            numerator = params.get("numerator", 4)
+                            denominator = params.get("denominator", 4)
+                            result = self._set_time_signature(numerator, denominator)
+                        elif command_type == "get_metronome":
+                            result = self._get_metronome()
+                        elif command_type == "set_metronome":
+                            enabled = params.get("enabled", False)
+                            result = self._set_metronome(enabled)
+                        elif command_type == "get_quantization":
+                            result = self._get_quantization()
+                        elif command_type == "set_quantization":
+                            quantization_value = params.get("quantization_value", 4)
+                            result = self._set_quantization(quantization_value)
+                        elif command_type == "get_record_quantization":
+                            result = self._get_record_quantization()
+                        elif command_type == "set_record_quantization":
+                            quantization_value = params.get("quantization_value", 0)
+                            result = self._set_record_quantization(quantization_value)
+                        # Visual organization
+                        elif command_type == "set_track_color":
+                            track_index = params.get("track_index", 0)
+                            color = params.get("color", 0)
+                            result = self._set_track_color(track_index, color)
+                        elif command_type == "get_track_color":
+                            track_index = params.get("track_index", 0)
+                            result = self._get_track_color(track_index)
+                        elif command_type == "set_clip_color":
+                            track_index = params.get("track_index", 0)
+                            clip_index = params.get("clip_index", 0)
+                            color = params.get("color", 0)
+                            result = self._set_clip_color(track_index, clip_index, color)
+                        elif command_type == "get_clip_color":
+                            track_index = params.get("track_index", 0)
+                            clip_index = params.get("clip_index", 0)
+                            result = self._get_clip_color(track_index, clip_index)
+                        # Arrangement
+                        elif command_type == "get_arrangement_loop":
+                            result = self._get_arrangement_loop()
+                        elif command_type == "set_arrangement_loop":
+                            loop_enabled = params.get("loop_enabled", None)
+                            loop_start = params.get("loop_start", None)
+                            loop_length = params.get("loop_length", None)
+                            result = self._set_arrangement_loop(loop_enabled, loop_start, loop_length)
+                        elif command_type == "set_song_time":
+                            time = params.get("time", 0.0)
+                            result = self._set_song_time(time)
+                        elif command_type == "jump_by_bars":
+                            bars = params.get("bars", 0)
+                            result = self._jump_by_bars(bars)
                         
                         # Put the result in the queue
                         response_queue.put({"status": "success", "result": result})
@@ -1942,6 +2006,332 @@ class AbletonMCP(ControlSurface):
             return result
         except Exception as e:
             self.log_message("Error setting track output routing: " + str(e))
+            raise
+    
+    # ==================== SESSION SETTINGS ====================
+    
+    def _get_time_signature(self):
+        """Get the current time signature"""
+        try:
+            result = {
+                "numerator": self._song.signature_numerator,
+                "denominator": self._song.signature_denominator
+            }
+            return result
+        except Exception as e:
+            self.log_message("Error getting time signature: " + str(e))
+            raise
+    
+    def _set_time_signature(self, numerator, denominator):
+        """Set the time signature"""
+        try:
+            self._song.signature_numerator = numerator
+            self._song.signature_denominator = denominator
+            
+            result = {
+                "numerator": self._song.signature_numerator,
+                "denominator": self._song.signature_denominator
+            }
+            return result
+        except Exception as e:
+            self.log_message("Error setting time signature: " + str(e))
+            raise
+    
+    def _get_metronome(self):
+        """Get the metronome state"""
+        try:
+            result = {
+                "enabled": self._song.metronome
+            }
+            return result
+        except Exception as e:
+            self.log_message("Error getting metronome state: " + str(e))
+            raise
+    
+    def _set_metronome(self, enabled):
+        """Set the metronome state"""
+        try:
+            self._song.metronome = enabled
+            
+            result = {
+                "enabled": self._song.metronome
+            }
+            return result
+        except Exception as e:
+            self.log_message("Error setting metronome state: " + str(e))
+            raise
+    
+    def _get_quantization(self):
+        """Get the clip trigger quantization setting"""
+        try:
+            # Quantization values: 0=None, 1=8 bars, 2=4 bars, 3=2 bars, 4=1 bar, 
+            # 5=1/2, 6=1/2T, 7=1/4, 8=1/4T, 9=1/8, 10=1/8T, 11=1/16, 12=1/16T, 13=1/32
+            quant_value = self._song.clip_trigger_quantization
+            quant_names = {
+                0: "None",
+                1: "8 Bars",
+                2: "4 Bars", 
+                3: "2 Bars",
+                4: "1 Bar",
+                5: "1/2",
+                6: "1/2T",
+                7: "1/4",
+                8: "1/4T",
+                9: "1/8",
+                10: "1/8T",
+                11: "1/16",
+                12: "1/16T",
+                13: "1/32"
+            }
+            
+            result = {
+                "quantization_value": quant_value,
+                "quantization_name": quant_names.get(quant_value, "Unknown")
+            }
+            return result
+        except Exception as e:
+            self.log_message("Error getting quantization: " + str(e))
+            raise
+    
+    def _set_quantization(self, quantization_value):
+        """Set the clip trigger quantization"""
+        try:
+            # Clamp to valid range
+            quantization_value = max(0, min(13, quantization_value))
+            self._song.clip_trigger_quantization = quantization_value
+            
+            quant_names = {
+                0: "None",
+                1: "8 Bars",
+                2: "4 Bars",
+                3: "2 Bars",
+                4: "1 Bar",
+                5: "1/2",
+                6: "1/2T",
+                7: "1/4",
+                8: "1/4T",
+                9: "1/8",
+                10: "1/8T",
+                11: "1/16",
+                12: "1/16T",
+                13: "1/32"
+            }
+            
+            result = {
+                "quantization_value": self._song.clip_trigger_quantization,
+                "quantization_name": quant_names.get(self._song.clip_trigger_quantization, "Unknown")
+            }
+            return result
+        except Exception as e:
+            self.log_message("Error setting quantization: " + str(e))
+            raise
+    
+    def _get_record_quantization(self):
+        """Get the MIDI recording quantization setting"""
+        try:
+            quant_value = self._song.midi_recording_quantization
+            quant_names = {
+                0: "None",
+                1: "1/4",
+                2: "1/8",
+                3: "1/8T",
+                4: "1/8 + 1/8T",
+                5: "1/16",
+                6: "1/16T",
+                7: "1/16 + 1/16T",
+                8: "1/32"
+            }
+            
+            result = {
+                "quantization_value": quant_value,
+                "quantization_name": quant_names.get(quant_value, "Unknown")
+            }
+            return result
+        except Exception as e:
+            self.log_message("Error getting record quantization: " + str(e))
+            raise
+    
+    def _set_record_quantization(self, quantization_value):
+        """Set the MIDI recording quantization"""
+        try:
+            # Clamp to valid range
+            quantization_value = max(0, min(8, quantization_value))
+            self._song.midi_recording_quantization = quantization_value
+            
+            quant_names = {
+                0: "None",
+                1: "1/4",
+                2: "1/8",
+                3: "1/8T",
+                4: "1/8 + 1/8T",
+                5: "1/16",
+                6: "1/16T",
+                7: "1/16 + 1/16T",
+                8: "1/32"
+            }
+            
+            result = {
+                "quantization_value": self._song.midi_recording_quantization,
+                "quantization_name": quant_names.get(self._song.midi_recording_quantization, "Unknown")
+            }
+            return result
+        except Exception as e:
+            self.log_message("Error setting record quantization: " + str(e))
+            raise
+    
+    # ==================== VISUAL ORGANIZATION ====================
+    
+    def _set_track_color(self, track_index, color):
+        """Set the color of a track"""
+        try:
+            if track_index < 0 or track_index >= len(self._song.tracks):
+                raise IndexError("Track index out of range")
+            
+            track = self._song.tracks[track_index]
+            track.color = color
+            
+            result = {
+                "track_index": track_index,
+                "color": track.color
+            }
+            return result
+        except Exception as e:
+            self.log_message("Error setting track color: " + str(e))
+            raise
+    
+    def _get_track_color(self, track_index):
+        """Get the color of a track"""
+        try:
+            if track_index < 0 or track_index >= len(self._song.tracks):
+                raise IndexError("Track index out of range")
+            
+            track = self._song.tracks[track_index]
+            
+            result = {
+                "track_index": track_index,
+                "color": track.color
+            }
+            return result
+        except Exception as e:
+            self.log_message("Error getting track color: " + str(e))
+            raise
+    
+    def _set_clip_color(self, track_index, clip_index, color):
+        """Set the color of a clip"""
+        try:
+            if track_index < 0 or track_index >= len(self._song.tracks):
+                raise IndexError("Track index out of range")
+            
+            track = self._song.tracks[track_index]
+            
+            if clip_index < 0 or clip_index >= len(track.clip_slots):
+                raise IndexError("Clip index out of range")
+            
+            clip_slot = track.clip_slots[clip_index]
+            
+            if not clip_slot.has_clip:
+                raise Exception("No clip in slot")
+            
+            clip_slot.clip.color = color
+            
+            result = {
+                "track_index": track_index,
+                "clip_index": clip_index,
+                "color": clip_slot.clip.color
+            }
+            return result
+        except Exception as e:
+            self.log_message("Error setting clip color: " + str(e))
+            raise
+    
+    def _get_clip_color(self, track_index, clip_index):
+        """Get the color of a clip"""
+        try:
+            if track_index < 0 or track_index >= len(self._song.tracks):
+                raise IndexError("Track index out of range")
+            
+            track = self._song.tracks[track_index]
+            
+            if clip_index < 0 or clip_index >= len(track.clip_slots):
+                raise IndexError("Clip index out of range")
+            
+            clip_slot = track.clip_slots[clip_index]
+            
+            if not clip_slot.has_clip:
+                raise Exception("No clip in slot")
+            
+            result = {
+                "track_index": track_index,
+                "clip_index": clip_index,
+                "color": clip_slot.clip.color
+            }
+            return result
+        except Exception as e:
+            self.log_message("Error getting clip color: " + str(e))
+            raise
+    
+    # ==================== ARRANGEMENT VIEW ====================
+    
+    def _get_arrangement_loop(self):
+        """Get the arrangement loop settings"""
+        try:
+            result = {
+                "loop_enabled": self._song.loop,
+                "loop_start": self._song.loop_start,
+                "loop_length": self._song.loop_length,
+                "loop_end": self._song.loop_start + self._song.loop_length
+            }
+            return result
+        except Exception as e:
+            self.log_message("Error getting arrangement loop: " + str(e))
+            raise
+    
+    def _set_arrangement_loop(self, loop_enabled, loop_start, loop_length):
+        """Set the arrangement loop settings"""
+        try:
+            if loop_start is not None:
+                self._song.loop_start = loop_start
+            if loop_length is not None:
+                self._song.loop_length = loop_length
+            if loop_enabled is not None:
+                self._song.loop = loop_enabled
+            
+            result = {
+                "loop_enabled": self._song.loop,
+                "loop_start": self._song.loop_start,
+                "loop_length": self._song.loop_length,
+                "loop_end": self._song.loop_start + self._song.loop_length
+            }
+            return result
+        except Exception as e:
+            self.log_message("Error setting arrangement loop: " + str(e))
+            raise
+    
+    def _set_song_time(self, time):
+        """Set the current song playback position"""
+        try:
+            self._song.current_song_time = time
+            
+            result = {
+                "current_song_time": self._song.current_song_time
+            }
+            return result
+        except Exception as e:
+            self.log_message("Error setting song time: " + str(e))
+            raise
+    
+    def _jump_by_bars(self, bars):
+        """Jump forward or backward by a number of bars"""
+        try:
+            self._song.jump_by(bars)
+            
+            result = {
+                "jumped_bars": bars,
+                "current_song_time": self._song.current_song_time
+            }
+            return result
+        except Exception as e:
+            self.log_message("Error jumping by bars: " + str(e))
             raise
     
     def _get_browser_item(self, uri, path):
